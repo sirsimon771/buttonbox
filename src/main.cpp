@@ -1,9 +1,18 @@
 #include <Arduino.h>
+#include <Joystick.h>
+
+int i = 0;
 
 void setup() {
-  // put your setup code here, to run once:
+
+  Serial.begin(9600);
+
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+
+  delay(750);
+  Serial.print("\r\nHello World! - ");
+  Serial.print(i);
+  i++;
 }
