@@ -15,13 +15,13 @@ const int toggleHold = 200;  //time in ms to hold toggle button pressed
 const int rotaryHold = 20;  //time in ms to hold rotary button pressed
 
 //inputting the matrix layout
-//b = button | t = toggle | r = rotary-button | s = toggle2 | n = none/empty
+//b = button | t = toggle | r = rotary-button | s = o-i-o toggle | n = none/empty
 String matrix[rows][cols] = {   {"b", "b", "b", "b", "t"},
                                 {"b", "b", "b", "b", "t"},
                                 {"b", "b", "b", "b", "t"},
                                 {"t", "t", "r", "r", "r"},
-                                {"r", "r", "s", "s", "n"},
-                                {"s", "s", "n", "n", "n"} };
+                                {"r", "r", "sa", "sb", "n"},
+                                {"sa", "sb", "n", "n", "n"} };
 
 int pinrows[rows] = {4, 5, 6, 8, 9, 10};
 int pincols[cols] = {14, 15, 16, 18, 19};
@@ -66,8 +66,9 @@ R1p1   |R2p1   |R3p1   |R4p1   |R5p1   |R*p2
 void setup()
 {
   Joystick.begin(true); //initialize joystick, AutoSendState=true
-  setPinModes();  //sets all pins to the right mode
-  readMatrixNum(); //fill num[] array
+  setPinModes();        //sets all pins to the right mode
+  readMatrixNum();      //fill num[] array
+  initializeToggles();  //set all toggles to initial states (press no buttons)
 }
 
 void loop()
@@ -82,7 +83,7 @@ void loop()
     {
       int pr = pinrows[r];              //pin of current row
       int b = num[r][c];                //button number of current position
-      String t = matrix[r][c];          //current type ("b"|"t"|"r"|"s")
+      String t = matrix[r][c];          //current type ("b"|"t"|"r"|"sa"/"sb")
       bool pinStatus = digitalRead(pr); //read matrix row
 
       //read state != saved state -> do something
@@ -98,7 +99,7 @@ void loop()
         }
 
         ////toggle switches////press b for "on" & b+1 for "off"////
-        if (t == "t" || "s")
+        if (t == "t")
         {
           if (pinStatus) //toggle on
           {
@@ -108,6 +109,25 @@ void loop()
           else //toggle off
           {
             Joystick.setButton(b + 1, true);
+            state[r][c] = false;
+          }
+        }
+        //// o-i-o toggles////press b for "up" | b+1 for "down" | b
+        else if (t == "sa" || "sb")
+        {
+          if (pinStatus) //toggle on
+          {
+            Joystick.setButton(b, true);
+            state[r][c] = true;
+          }
+          else //toggle off
+          {
+            int boff = 2;  //button offset for the "off" button if t == "sa"
+            if(t=="sb")
+            {
+              boff = 1;   //button offset for second pin
+            }
+            Joystick.setButton(b + boff, true); //add button offset for "off"
             state[r][c] = false;
           }
         }
@@ -162,11 +182,27 @@ void readMatrixNum()  //fills the num[][] matrix with button numbers
         current++;
         continue;
       }
-      else if (matrix[r][c] == "s") //toggle2 numbering
+      else if (matrix[r][c] == "sa" || "sb") //toggle2 numbering
       {
         num[r][c] = floor(current);
         current = current + 1.5; // toggle2 needs 3 buttons
         continue;
+      }
+    }
+  }
+}
+
+void initializeToggles()  //set toggle states in state[][]
+{
+  for (int c = 0; c < cols; c++)
+  {
+    digitalWrite(pincols[c], HIGH); //set current col to high
+
+    for (int r = 0; r < rows; r++)
+    {
+      if(matrix[r][c] == "t" || "sa" || "sb")
+      {
+        state[r][c] = digitalRead(pinrows[r]);
       }
     }
   }
