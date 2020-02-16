@@ -23,15 +23,11 @@ String matrix[rows][cols] = {   {"b", "b", "b", "b", "t"},
                                 {"r", "r", "s", "s", "n"},
                                 {"s", "s", "n", "n", "n"} };
 
-
 int pinrows[rows] = {4, 5, 6, 8, 9, 10};
 int pincols[cols] = {14, 15, 16, 18, 19};
 
-//type of button, 0 = pushbutton | 1 = toggle
-int type[buttons];
-
 //number of buttons on joystick
-int num[rows][cols];
+int num[rows][cols] = {-1};
 
 //state of all matrix elements
 bool state[rows][cols] = {0};
@@ -42,7 +38,6 @@ int stoggleState[2] = {0};
 
 //matrix for timers (for debouncing and releasing of toggle buttons)
 int timer[rows][cols] = {0};
-
 
 /*Matrix wiring layout:
 
@@ -57,7 +52,6 @@ int timer[rows][cols] = {0};
 interrupt pins for rotary encoders phase 1
 3(INT0)|2(INT1)|0(INT2)|1(INT3)|7(INT6)|20
 R1p1   |R2p1   |R3p1   |R4p1   |R5p1   |R*p2
-
 
     14|15|16|18|19
 4   0 |1 |2 |3 |12
@@ -78,7 +72,6 @@ void setup()
 
 void loop()
 {
-
   //scan matrix
   for (int c = 0; c < cols; c++)
   {
@@ -140,34 +133,6 @@ void setPinModes()  //sets all pins to the right mode
   for (int i = 0; i < rows; i++)  //set row pins to inputs
   {
     pinMode(pinrows[i], INPUT);
-  }
-}
-
-
-
-void readMatrixType() //fills the type[] array
-{
-  int counter = 0;
-
-  for (int i = 0; i < rows; i++)
-  {
-    for (int j = 0; j < cols; j++)
-    {
-      if (matrix[i][j] == "b" || "r")
-      {
-        type[counter] = 0; //pushbutton = 0
-      }
-      else if (matrix[i][j] == "t" || "s")
-      {
-        type[counter] = 1; //toggle = 1
-      }
-      else //if end of matrix is reached ("n"), return
-      {
-        return;
-      }
-
-      counter++;
-    }
   }
 }
 
