@@ -4,9 +4,6 @@
 //creating the joystick object
 Joystick_ Joystick;
 
-//create rotary encoder objects
-RotaryEncoder re[5];
-
 //phase 2 pin number
 const int pinPhase2 = 20;
 const int pins[5] = {3, 2, 0, 1, 7};
@@ -50,6 +47,13 @@ int timer[rows][cols] = {0};
 void setPinModes();
 void readMatrixNum();
 void initializeToggles();
+
+//interupt handlers prototypes
+void interruptRotary1();
+void interruptRotary2();
+void interruptRotary3();
+void interruptRotary4();
+void interruptRotary5();
 
 /////rotary encoder class/////
 class RotaryEncoder
@@ -110,7 +114,7 @@ int RotaryEncoder::pinInt() { return digitalPinToInterrupt(pinPhase1); }
 
 void RotaryEncoder::setPin(int p) { pinPhase1 = p; }
 void RotaryEncoder::setB1(int b1) { button1Num = b1; }
-void RotaryEncoder::setB1(int b2) { button2Num = b2; }
+void RotaryEncoder::setB2(int b2) { button2Num = b2; }
 
 /*Matrix wiring layout:
 
@@ -136,6 +140,9 @@ R1p1   |R2p1   |R3p1   |R4p1   |R5p1   |R*p2
 
 */
 
+//create rotary encoder objects
+RotaryEncoder re[5];
+
 void setup()
 {
   Joystick.begin(true); //initialize joystick, AutoSendState=true
@@ -153,11 +160,13 @@ void setup()
         re[i].setB2(b);
         b++;
     }
-    //attach interrupts
-    for (int i = 0; i < 5; i++)
-    {
-        attachInterrupt(re[i].pinInt, re[i].turn, RISING);
-    }
+
+    //attach interrupts //make seperate functions!!!!!
+    attachInterrupt(3, interruptRotary1, RISING);
+    attachInterrupt(2, interruptRotary2, RISING);
+    attachInterrupt(0, interruptRotary3, RISING);
+    attachInterrupt(1, interruptRotary4, RISING);
+    attachInterrupt(7, interruptRotary5, RISING);
 }
 
 void loop()
@@ -231,7 +240,7 @@ void loop()
     }
   }
 
-  //release joystick buttons for rotary encoders
+  //release joystick buttons for rotary encoders IMPLEMENT TIMERS
   for (int i = 0; i < 5; i++)
   {
     re[i].release();
@@ -310,3 +319,26 @@ void initializeToggles()  //set toggle states in state[][]
     }
   }
 }
+
+/////interrupt handlers/////
+void interruptRotary1()
+{
+  
+}
+void interruptRotary2()
+{
+  
+}
+void interruptRotary3()
+{
+  
+}
+void interruptRotary4()
+{
+  
+}
+void interruptRotary5()
+{
+  
+}
+
