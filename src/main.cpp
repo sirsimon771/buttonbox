@@ -39,6 +39,11 @@ int stoggleState[2] = {0};
 //matrix for timers (for debouncing and releasing of toggle buttons)
 int timer[rows][cols] = {0};
 
+//function prototypes
+void setPinModes();
+void readMatrixNum();
+void initializeToggles();
+
 /*Matrix wiring layout:
 
     14 |15 |16 |18 |19
