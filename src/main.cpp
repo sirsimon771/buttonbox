@@ -4,15 +4,21 @@
 //creating the joystick object
 Joystick_ Joystick;
 
-//phase 2 pin number
-const int pinPhase2 = 20;
-const int pins[5] = {3, 2, 0, 1, 7};
+const int pinPhase2 = 20;             //phase 2 pin number
+const int rpins[5] = {3, 2, 0, 1, 7};  //phase 1 pins
+
+//button nums (cw, ccw)
+const int rButtons[2][5] = {  {33, 35, 37, 39, 41},
+                              {34, 36, 38, 40, 42} };
+
+volatile bool lastcw[5] = {false};    //state of clockwise button
+volatile bool lastccw[5] = {false};   //state of counterclockwise button
 
 //number of buttons used
 const int buttons = 25;
 
-const int rows = 6;
-const int cols = 5;
+const int rows = 6;   //number of matrix rows
+const int cols = 5;   //number of matrix columns
 
 const int debounce = 6;  //delay in ms between button presses for debouncing
 const int toggleHold = 200;  //time in ms to hold toggle button pressed
@@ -55,67 +61,6 @@ void interruptRotary3();
 void interruptRotary4();
 void interruptRotary5();
 
-/////rotary encoder class/////
-class RotaryEncoder
-{
-private:
-  int button1Num, button2Num; //button1 = cw || button2 = ccw
-  int pinPhase1, pinPhase2;
-  volatile bool lastcw, lastccw = false;
-
-public:
-  void start();       //set pinMode
-  void turn();        //set joystick buttons
-  void release();     //release joystick buttons (implement delay/holdtime of 20ms)
-  int pinNum();       //output the pin number
-  int pinInt();       //output the interrupt number
-  void setPin(int p); //set pin number
-  void setB1(int b1); //set button 1 number
-  void setB2(int b2); //set button 2 number
-
-  //constructor, takes pin phase 1 number & 2 button numbers
-  RotaryEncoder(int pin, int b1, int b2)
-  {
-    pinPhase1 = pin;
-    button1Num = b1;
-    button2Num = b2;
-  }
-
-  //constructor overload for array of objects
-  RotaryEncoder()
-  {
-    pinPhase1 = -1;
-    button1Num = -1;
-    button2Num = -1;
-  }
-};
-
-/////rotary encoder methods/////
-
-void RotaryEncoder::start() //set pinMode
-{
-  pinMode(pinPhase1, INPUT);
-}
-
-void RotaryEncoder::turn()
-// code to check for turning direction
-// and pushing the joystick buttons
-{
-}
-
-void RotaryEncoder::release()
-//code to release both buttons of phase1 is low and one of them is pressed
-{
-}
-
-int RotaryEncoder::pinNum() { return pinPhase1; }
-
-int RotaryEncoder::pinInt() { return digitalPinToInterrupt(pinPhase1); }
-
-void RotaryEncoder::setPin(int p) { pinPhase1 = p; }
-void RotaryEncoder::setB1(int b1) { button1Num = b1; }
-void RotaryEncoder::setB2(int b2) { button2Num = b2; }
-
 /*Matrix wiring layout:
 
     14 |15 |16 |18 |19
@@ -140,9 +85,6 @@ R1p1   |R2p1   |R3p1   |R4p1   |R5p1   |R*p2
 
 */
 
-//create rotary encoder objects
-RotaryEncoder re[5];
-
 void setup()
 {
   Joystick.begin(true); //initialize joystick, AutoSendState=true
@@ -150,23 +92,12 @@ void setup()
   readMatrixNum();      //fill num[] array
   initializeToggles();  //set all toggles to initial states (press no buttons)
 
-  //initialize rotary encoder object in array with values
-      for (int i = 0; i < 5; i++)
-    {
-        int b = 0;
-        re[i].setPin(pins[i]);
-        re[i].setB1(b);
-        b++;
-        re[i].setB2(b);
-        b++;
-    }
-
-    //attach interrupts //make seperate functions!!!!!
-    attachInterrupt(3, interruptRotary1, RISING);
-    attachInterrupt(2, interruptRotary2, RISING);
-    attachInterrupt(0, interruptRotary3, RISING);
-    attachInterrupt(1, interruptRotary4, RISING);
-    attachInterrupt(7, interruptRotary5, RISING);
+  //attach interrupts //make seperate functions!!!!!
+  attachInterrupt(3, interruptRotary1, RISING);
+  attachInterrupt(2, interruptRotary2, RISING);
+  attachInterrupt(0, interruptRotary3, RISING);
+  attachInterrupt(1, interruptRotary4, RISING);
+  attachInterrupt(7, interruptRotary5, RISING);
 }
 
 void loop()
@@ -220,10 +151,10 @@ void loop()
           }
           else //toggle off
           {
-            int boff = 2;  //button offset for the "off" button if t == "sa"
-            if(t=="sb")
+            int boff = 2; //button offset for the "off" button if t == "sa"
+            if (t == "sb")
             {
-              boff = 1;   //button offset for second pin
+              boff = 1; //button offset for second pin
             }
             Joystick.setButton(b + boff, true); //add button offset for "off"
             state[r][c] = false;
@@ -239,25 +170,16 @@ void loop()
       }
     }
   }
-
-  //release joystick buttons for rotary encoders IMPLEMENT TIMERS
-  for (int i = 0; i < 5; i++)
-  {
-    re[i].release();
-  }
+  /////release rotary encoder buttons/////
+  rotaryRelease();
 }
-
-
-
-
-
-
 
 
 
 /////used functions/////
 void setPinModes()  //sets all pins to the right mode
 {
+  //matrix pins
   for (int i = 0; i < cols; i++)  //set col pins to outputs
   {
     pinMode(pincols[i], OUTPUT);
@@ -266,6 +188,9 @@ void setPinModes()  //sets all pins to the right mode
   {
     pinMode(pinrows[i], INPUT);
   }
+
+  //rotary encoder pins (just the phase 2 pin)
+  pinMode(pinPhase2, INPUT);
 }
 
 void readMatrixNum()  //fills the num[][] matrix with button numbers
@@ -320,25 +245,105 @@ void initializeToggles()  //set toggle states in state[][]
   }
 }
 
+void rotaryRelease()
+{
+  for (int i = 0; i < 5; i++)
+  {
+    //release both buttons if phase 1 is low and either is pressed
+    if (digitalRead(rpins[i]) == LOW && ( lastcw[i] || lastccw[i]) )
+    {
+      Joystick.setButton(rButtons[0][i], 0);
+      Joystick.setButton(rButtons[1][i], 0);
+      lastcw[i], lastccw[i] = false;
+    }
+  }
+}
+
+
+
 /////interrupt handlers/////
 void interruptRotary1()
 {
-  
+  //check for turning direction
+  //and push repective joystick buttons for rotary 1
+  if (digitalRead(pinPhase2) == HIGH)
+  {
+    //press button 1 (clockwise)
+    Joystick.setButton(rButtons[0][0], 1);
+    lastcw[0] = true;
+  }
+  else if (digitalRead(pinPhase2) == LOW)
+  {
+    //press button 2 (counterclockwise)
+    Joystick.setButton(rButtons[1][0], 1);
+    lastccw[0] = true;
+  }
 }
 void interruptRotary2()
 {
-  
+  //check for turning direction
+  //and push repective joystick buttons for rotary 2
+  if (digitalRead(pinPhase2) == HIGH)
+  {
+    //press button 1 (clockwise)
+    Joystick.setButton(rButtons[0][1], 1);
+    lastcw[1] = true;
+  }
+  else if (digitalRead(pinPhase2) == LOW)
+  {
+    //press button 2 (counterclockwise)
+    Joystick.setButton(rButtons[1][1], 1);
+    lastccw[1] = true;
+  }
 }
 void interruptRotary3()
 {
-  
+  //check for turning direction
+  //and push repective joystick buttons for rotary 3
+  if (digitalRead(pinPhase2) == HIGH)
+  {
+    //press button 1 (clockwise)
+    Joystick.setButton(rButtons[0][2], 1);
+    lastcw[2] = true;
+  }
+  else if (digitalRead(pinPhase2) == LOW)
+  {
+    //press button 2 (counterclockwise)
+    Joystick.setButton(rButtons[1][2], 1);
+    lastccw[2] = true;
+  }
 }
 void interruptRotary4()
 {
-  
+  //check for turning direction
+  //and push repective joystick buttons for rotary 4
+  if (digitalRead(pinPhase2) == HIGH)
+  {
+    //press button 1 (clockwise)
+    Joystick.setButton(rButtons[0][3], 1);
+    lastcw[3] = true;
+  }
+  else if (digitalRead(pinPhase2) == LOW)
+  {
+    //press button 2 (counterclockwise)
+    Joystick.setButton(rButtons[1][3], 1);
+    lastccw[3] = true;
+  }
 }
 void interruptRotary5()
 {
-  
+  //check for turning direction
+  //and push repective joystick buttons for rotary 5
+  if (digitalRead(pinPhase2) == HIGH)
+  {
+    //press button 1 (clockwise)
+    Joystick.setButton(rButtons[0][4], 1);
+    lastcw[4] = true;
+  }
+  else if (digitalRead(pinPhase2) == LOW)
+  {
+    //press button 2 (counterclockwise)
+    Joystick.setButton(rButtons[1][4], 1);
+    lastccw[4] = true;
+  }
 }
-
