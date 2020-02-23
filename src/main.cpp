@@ -15,7 +15,7 @@ volatile bool lastcw[5] = {false};    //state of clockwise button
 volatile bool lastccw[5] = {false};   //state of counterclockwise button
 
 //number of buttons used
-const int buttons = 25;
+const int buttons = 26;
 
 const int rows = 6;   //number of matrix rows
 const int cols = 5;   //number of matrix columns
