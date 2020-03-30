@@ -8,13 +8,14 @@ const int pinPhase2 = 21;             //phase 2 pin number
 const int rpins[5] = {3, 2, 0, 1, 7};       //phase 1 pins
 
 //button nums (cw, ccw)
-int rButtons[2][5] = {-1};
+const int rButtons[2][5] = {  {37, 39, 41, 43, 45},
+                              {38, 40, 42, 44, 46}  };
 
 volatile bool lastcw[5] = {false};    //state of clockwise button
 volatile bool lastccw[5] = {false};   //state of counterclockwise button
 
 //number of buttons used
-int buttons;
+const int buttons = 47;
 
 const int rows = 6;   //number of matrix rows
 const int cols = 6;   //number of matrix columns
@@ -25,34 +26,35 @@ const int rotaryHold = 70;  //time in ms to hold rotary button pressed
 
 //inputting the matrix layout
 //b = button | t = toggle | r = rotary-button | s = o-i-o toggle | n = none/empty
-String matrix[rows][cols] = {   {"b", "b", "b", "b", "t", "t"},
+const String matrix[6][6] = {   {"b", "b", "b", "b", "t", "t"},
                                 {"b", "b", "b", "b", "t", "t"},
-                                {"b", "b", "b", "b", "t", "r"},
-                                {"r", "r", "r", "r", "m", "m"},
-                                {"m", "m", "m", "m", "m", "m"},
-                                {"m", "m", "n", "n", "n", "n"} };
+                                {"b", "b", "b", "b", "t", "m"},
+                                {"r", "r", "r", "r", "r", "m"},
+                                {"m", "m", "m", "m", "n", "n"},
+                                {"m", "m", "m", "m", "n", "n"} };
 
-int pinrows[rows] = {4, 5, 6, 8, 9, 10};
-int pincols[cols] = {14, 15, 16, 18, 19, 20};
+//pin numbers of all columns and rows
+const int pinrows[6] = {4, 5, 6, 8, 9, 10};
+const int pincols[6] = {14, 15, 16, 18, 19, 20};
 
-//number of buttons on joystick
-int num[rows][cols] = {-1};
+//numbers of joystick-buttons
+const int num[6][6] = { { 0,  1,  2,  3, 12, 14},
+                        { 4,  5,  6,  7, 16, 18},
+                        { 8,  9, 10, 11, 20, 27},
+                        {22, 23, 24, 25, 26, 28},
+                        {29, 31, 33, 35, -1, -1},
+                        {30, 32, 34, 36, -1, -1}  };    
 
 //state of all matrix elements
-bool state[rows][cols] = {0};
-
-//state of toggles | 0=off 1=on
-int toggleState[5] = {0};
-int stoggleState[2] = {0};
+bool state[6][6] = {false};
 
 //matrix for timers (for debouncing and releasing of toggle buttons)
-unsigned long timer[rows][cols] = {0};
+unsigned long timer[6][6] = {0};
 //timers for releasing rotary encoder buttons (two each)
 volatile unsigned long rtimer[2][5] = {millis()};
 
 //function prototypes
 void setPinModes();
-void readMatrixNum();
 void initializeToggles();
 void rotaryRelease();
 
@@ -63,27 +65,28 @@ void interruptRotary3();
 void interruptRotary4();
 void interruptRotary5();
 
-/*Matrix wiring layout:
+/*matrix wiring layout:
 
-     14 |15 |16 |18 |19 |20
-4  | B1 |B2 |B3 |B4 |T1 |T2
-5  | B5 |B6 |B7 |B8 |T3 |T4
-6  | B9 |B10|B11|B12|T5 |R1
-8  | R2 |R3 |R4 |R5 |M1a|M1b
-9  | M2a|M2b|M3a|M3b|M4a|M4b
-10 | M5a|M5b|
+    14 |15 |16 |18 |19 |20
+4   B1 |B2 |B3 |B4 |T1 |T2
+5   B5 |B6 |B7 |B8 |T3 |T4
+6   B9 |B10|B11|B12|T5 |M1a
+8   R1 |R2 |R3 |R4 |R5 |M1b
+9   M2a|M3a|M4a|M5a|
+10  M2b|M3b|M4b|M5b|
 
 interrupt pins for rotary encoders phase 1
 3(INT0)|2(INT1)|0(INT2)|1(INT3)|7(INT6)|21
 R1p1   |R2p1   |R3p1   |R4p1   |R5p1   |R*p2
 
+matrix button numbering:
     14|15|16|18|19|20
 4   0 |1 |2 |3 |12|14
 5   4 |5 |6 |7 |16|18
-6   8 |9 |10|11|20|22
-8   23|24|25|26|27|28
-9   29|30|31|32|33|34
-10  35|36|
+6   8 |9 |10|11|20|27
+8   22|23|24|25|26|28
+9   29|31|33|35|-1|-1
+10  30|32|34|36|-1|-1
 
 */
 
@@ -91,7 +94,6 @@ void setup()
 {
   Joystick.begin(true); //initialize joystick, AutoSendState=true
   setPinModes();        //sets all pins to the right mode
-  readMatrixNum();      //fill num[] array
   initializeToggles();  //set all toggles to initial states (press no buttons)
 
   //attach interrupts //make seperate functions!!!!!
@@ -196,53 +198,6 @@ void setPinModes()  //sets all pins to the right mode
   pinMode(pinPhase2, INPUT);
 }
 
-void readMatrixNum()  //fills the num[][] matrix with button numbers
-{
-  double current = 0; //the current button-counter
-
-  for (int c = 0; c < cols; c++)
-  {
-    for (int r = 0; r < rows; r++)
-    {
-      if (matrix[r][c] == "b") //button numbering
-      {
-        num[r][c] = current;
-        current++;
-      }
-      else if (matrix[r][c] == "t") //toggle numbering
-      {
-        num[r][c] = current;
-        current = current + 2; //toggle needs two buttons
-      }
-      else if (matrix[r][c] == "r") //rotary pushbutton numbering
-      {
-        num[r][c] = current;
-        current++;
-      }
-      else if (matrix[r][c] == "m") //momentary toggle numbering
-      {
-        num[r][c] = current;
-        current++;
-      }
-      else if (matrix[r][c] == "sa" || "sb")  //3-position toggles numbering
-      {
-        num[r][c] = floor(current);
-        current = current + 1.5;
-      }
-    }
-  }
-  //go through rotary encoder buttons (2 each, clockwise & counterclockwise)
-  for (int r = 0; r < 2; r++)
-  {
-    for (int c = 0; c < 5; c++)
-    {
-      rButtons[r][c] = current;
-      current++;
-    }
-  }
-  buttons = current;  //number of buttons
-}
-
 void initializeToggles()  //set toggle states in state[][]
 {
   for (int c = 0; c < cols; c++)
@@ -285,6 +240,9 @@ void rotaryRelease()
     }
   }
 }
+
+
+
 
 
 /////interrupt handlers/////
