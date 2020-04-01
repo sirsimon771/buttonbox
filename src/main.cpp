@@ -50,6 +50,7 @@ unsigned long timer[6][6] = {0};
 //function prototypes
 void setPinModes();
 void initializeToggles();
+void rotary(int num);
 
 
 /*matrix wiring layout:
@@ -62,10 +63,6 @@ void initializeToggles();
 9   M2a|M3a|M4a|M5a|
 10  M2b|M3b|M4b|M5b|
 
-interrupt pins for rotary encoders phase 1
-3(INT0)|2(INT1)|0(INT2)|1(INT3)|7(INT6)|21
-R1p1   |R2p1   |R3p1   |R4p1   |R5p1   |R*p2
-
 matrix button numbering:
     14|15|16|18|19|20
 4   0 |1 |2 |3 |12|14
@@ -74,6 +71,11 @@ matrix button numbering:
 8   22|23|24|25|26|28
 9   29|31|33|35|-1|-1
 10  30|32|34|36|-1|-1
+
+rotary encoder button numbering:
+ #  1  2  3  4  5     <- rotary encoder number
+cw  37 39 41 43 45    <- clockwise
+ccw 38 40 42 44 46    <- counterclockwise
 
 */
 
