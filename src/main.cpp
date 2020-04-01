@@ -1,18 +1,15 @@
 #include <Arduino.h>
+#include <Wire.h>
 #include <Joystick.h>
 
 //creating the joystick object
 Joystick_ Joystick;
 
-const int pinPhase2 = 21;             //phase 2 pin number
-const int rpins[5] = {3, 2, 0, 1, 7};       //phase 1 pins
-
-//button nums (cw, ccw)
+const int address = 17; //I2C address of secondary arduino
+//button nums (cw, ccw) -> send to secondary arduino on startup?
 const int rButtons[2][5] = {  {37, 39, 41, 43, 45},
                               {38, 40, 42, 44, 46}  };
 
-volatile bool lastcw[5] = {false};    //state of clockwise button
-volatile bool lastccw[5] = {false};   //state of counterclockwise button
 
 //number of buttons used
 const int buttons = 47;
@@ -22,7 +19,6 @@ const int cols = 6;   //number of matrix columns
 
 const int debounce = 6;  //delay in ms between button presses for debouncing
 const int toggleHold = 200;  //time in ms to hold toggle button pressed
-const int rotaryHold = 70;  //time in ms to hold rotary button pressed
 
 //inputting the matrix layout
 //b = button | t = toggle | r = rotary-button | s = o-i-o toggle | n = none/empty
@@ -50,20 +46,11 @@ bool state[6][6] = {false};
 
 //matrix for timers (for debouncing and releasing of toggle buttons)
 unsigned long timer[6][6] = {0};
-//timers for releasing rotary encoder buttons (two each)
-volatile unsigned long rtimer[2][5] = {millis()};
 
 //function prototypes
 void setPinModes();
 void initializeToggles();
-void rotaryRelease();
 
-//interupt handlers prototypes
-void interruptRotary1();
-void interruptRotary2();
-void interruptRotary3();
-void interruptRotary4();
-void interruptRotary5();
 
 /*matrix wiring layout:
 
@@ -94,14 +81,9 @@ void setup()
 {
   Joystick.begin(true); //initialize joystick, AutoSendState=true
   setPinModes();        //sets all pins to the right mode
+  Wire.begin(17);       //begin I2C communication as slave #17
+  Wire.onReceive(rotary); //attach receive handler
   initializeToggles();  //set all toggles to initial states (press no buttons)
-
-  //attach interrupts //make seperate functions!!!!!
-  attachInterrupt(3, interruptRotary1, RISING);
-  attachInterrupt(2, interruptRotary2, RISING);
-  attachInterrupt(0, interruptRotary3, RISING);
-  attachInterrupt(1, interruptRotary4, RISING);
-  attachInterrupt(7, interruptRotary5, RISING);
 }
 
 void loop()
@@ -175,8 +157,8 @@ void loop()
     }
     digitalWrite(pc, LOW);  //pull column pin back down
   }
-  /////release rotary encoder buttons/////
-  rotaryRelease();
+
+  /////maybe still release rotary encoders here? -> less messages to send/receive?
 }
 
 
@@ -193,9 +175,6 @@ void setPinModes()  //sets all pins to the right mode
   {
     pinMode(pinrows[i], INPUT);
   }
-
-  //rotary encoder phase2 pin
-  pinMode(pinPhase2, INPUT);
 }
 
 void initializeToggles()  //set toggle states in state[][]
@@ -216,120 +195,10 @@ void initializeToggles()  //set toggle states in state[][]
   }
 }
 
-void rotaryRelease()
+void rotary(int num)
 {
-  for (int i = 0; i < 5; i++)
-  {
-    //release buttons if phase1 is low, last is true & timer is > holding time
-    if (digitalRead(rpins[i]) == LOW && ( lastcw[i] || lastccw[i]) )
-    {
-      if (abs(millis() - timer[0][i]) > rotaryHold)
-      {
-        Joystick.setButton(rButtons[0][i], false);
-        lastcw[i] = false;
-      }
-      if (abs(millis() - timer[1][i]) > rotaryHold)
-      {
-        Joystick.setButton(rButtons[1][i], false);
-        lastccw[i] = false;
-      }
-
-      Joystick.setButton(rButtons[0][i], 0);
-      Joystick.setButton(rButtons[1][i], 0);
-      lastcw[i], lastccw[i] = false;
-    }
-  }
-}
-
-
-
-
-
-/////interrupt handlers/////
-void interruptRotary1()
-{
-  //check for turning direction
-  //and push repective joystick buttons for rotary 1
-  if (digitalRead(pinPhase2) && (abs(millis() - timer[0][0]) > debounce))
-  {
-    //press button 1 (clockwise)
-    Joystick.setButton(rButtons[0][0], 1);
-    lastcw[0] = true;
-    timer[0][0] = millis();
-  }
-  else if (abs(millis() - timer[1][0]) > debounce)
-  {
-    //press button 2 (counterclockwise)
-    Joystick.setButton(rButtons[1][0], 1);
-    lastccw[0] = true;
-    timer[0][1] = millis();
-  }
-}
-void interruptRotary2()
-{
-  //check for turning direction
-  //and push repective joystick buttons for rotary 2
-  if (digitalRead(pinPhase2) && (abs(millis() - timer[0][1]) > debounce))
-  {
-    //press button 1 (clockwise)
-    Joystick.setButton(rButtons[0][1], 1);
-    lastcw[1] = true;
-  }
-  else if (abs(millis() - timer[1][1]) > debounce)
-  {
-    //press button 2 (counterclockwise)
-    Joystick.setButton(rButtons[1][1], 1);
-    lastccw[1] = true;
-  }
-}
-void interruptRotary3()
-{
-  //check for turning direction
-  //and push repective joystick buttons for rotary 3
-  if (digitalRead(pinPhase2) && (abs(millis() - timer[0][2]) > debounce))
-  {
-    //press button 1 (clockwise)
-    Joystick.setButton(rButtons[0][2], 1);
-    lastcw[2] = true;
-  }
-  else if (abs(millis() - timer[1][2]) > debounce)
-  {
-    //press button 2 (counterclockwise)
-    Joystick.setButton(rButtons[1][2], 1);
-    lastccw[2] = true;
-  }
-}
-void interruptRotary4()
-{
-  //check for turning direction
-  //and push repective joystick buttons for rotary 4
-  if (digitalRead(pinPhase2) && (abs(millis() - timer[0][3]) > debounce))
-  {
-    //press button 1 (clockwise)
-    Joystick.setButton(rButtons[0][3], 1);
-    lastcw[3] = true;
-  }
-  else if (abs(millis() - timer[1][3]) > debounce)
-  {
-    //press button 2 (counterclockwise)
-    Joystick.setButton(rButtons[1][3], 1);
-    lastccw[3] = true;
-  }
-}
-void interruptRotary5()
-{
-  //check for turning direction
-  //and push repective joystick buttons for rotary 5
-  if (digitalRead(pinPhase2) && (abs(millis() - timer[0][4]) > debounce))
-  {
-    //press button 1 (clockwise)
-    Joystick.setButton(rButtons[0][4], 1);
-    lastcw[4] = true;
-  }
-  else if (abs(millis() - timer[1][4]) > debounce)
-  {
-    //press button 2 (counterclockwise)
-    Joystick.setButton(rButtons[1][4], 1);
-    lastccw[4] = true;
-  }
+  byte m = Wire.read();
+  byte s = m & 1;           //read last bit (desired button state)
+  byte n = (m >> 2) & 15;   //move 4-bit number to end, read only it
+  Joystick.setButton(n, s); //set button "n" to state "s"
 }
