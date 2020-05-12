@@ -5,14 +5,26 @@
 //creating the joystick object
 Joystick_ Joystick;
 
-const int address = 17; //I2C address of secondary arduino
-//button nums (cw, ccw) -> send to secondary arduino on startup?
-const int rButtons[2][5] = {  {37, 39, 41, 43, 45},
-                              {38, 40, 42, 44, 46}  };
+const unsigned int address = 17;   //I2C address of secondary arduino
+const unsigned int rotaryhold = 20;
+const unsigned int rotarydeb = 20;
+//pin nums -> send to secondary arduino on startup
+const unsigned int rPins[5][2] = {  {4, 19},
+                                    {5, 18},
+                                    {6, 15},
+                                    {7, 14},
+                                    {8, 16}  };
+//button nums (cw, ccw) -> send to secondary arduino on startup
+const unsigned int rButtons[5][2] = {   {37, 38},
+                                        {39, 40},
+                                        {41, 42},
+                                        {43, 44},
+                                        {45, 46}  };
 
+//rotary states & timers for releasing buttons
+unsigned bool rstate [5][2] = {false};
+unsigned long rtimer [5][2] = {millis()};
 
-//number of buttons used
-const int buttons = 47;
 
 const int rows = 6;   //number of matrix rows
 const int cols = 6;   //number of matrix columns
@@ -30,8 +42,8 @@ const String matrix[6][6] = {   {"b", "b", "b", "b", "t", "t"},
                                 {"m", "m", "m", "m", "n", "n"} };
 
 //pin numbers of all columns and rows
-const int pinrows[6] = {4, 5, 6, 8, 9, 10};
-const int pincols[6] = {14, 15, 16, 18, 19, 20};
+const int pinrows[6] = {4, 5, 6, 7, 8, 9};
+const int pincols[6] = {19, 18, 15, 14, 16, 10};
 
 //numbers of joystick-buttons
 const int num[6][6] = { { 0,  1,  2,  3, 12, 14},
@@ -51,26 +63,27 @@ unsigned long timer[6][6] = {0};
 void setPinModes();
 void initializeToggles();
 void rotary(int num);
+void request();
 
 
 /*matrix wiring layout:
 
-    14 |15 |16 |18 |19 |20
+    19 |18 |15 |14 |16 |10
 4   B1 |B2 |B3 |B4 |T1 |T2
 5   B5 |B6 |B7 |B8 |T3 |T4
 6   B9 |B10|B11|B12|T5 |M1a
-8   R1 |R2 |R3 |R4 |R5 |M1b
-9   M2a|M3a|M4a|M5a|
-10  M2b|M3b|M4b|M5b|
+7   R1 |R2 |R3 |R4 |R5 |M1b
+8   M2a|M3a|M4a|M5a|
+9   M2b|M3b|M4b|M5b|
 
 matrix button numbering:
-    14|15|16|18|19|20
+    19|18|15|14|16|10
 4   0 |1 |2 |3 |12|14
 5   4 |5 |6 |7 |16|18
 6   8 |9 |10|11|20|27
-8   22|23|24|25|26|28
-9   29|31|33|35|-1|-1
-10  30|32|34|36|-1|-1
+7   22|23|24|25|26|28
+8   29|31|33|35|-1|-1
+9   30|32|34|36|-1|-1
 
 rotary encoder button numbering:
  #  1  2  3  4  5     <- rotary encoder number
@@ -81,11 +94,12 @@ ccw 38 40 42 44 46    <- counterclockwise
 
 void setup()
 {
-  Joystick.begin(true); //initialize joystick, AutoSendState=true
-  setPinModes();        //sets all pins to the right mode
-  Wire.begin(17);       //begin I2C communication as slave #17
-  Wire.onReceive(rotary); //attach receive handler
-  initializeToggles();  //set all toggles to initial states (press no buttons)
+  Joystick.begin(true);     //initialize joystick, AutoSendState=true
+  setPinModes();            //sets all pins to the right mode
+  Wire.begin(17);           //begin I2C communication as slave #17
+  Wire.onReceive(rotary);   //attach receive handler
+  Wire.onRequest(request);  //attach request handler
+  initializeToggles();      //set all toggles to initial states (press no buttons)
 }
 
 void loop()
@@ -94,14 +108,14 @@ void loop()
   for (int c = 0; c < cols; c++)
   {
     int pc = pincols[c];    //pin of current column
-    digitalWrite(pc, HIGH); //pull current col pin high
+    digitalWrite(pc, LOW); //pull current col pin low
 
     for (int r = 0; r < rows; r++)
     {
       int pr = pinrows[r];              //pin of current row
       int b = num[r][c];                //button number of current position
       String t = matrix[r][c];          //current type ("b"|"t"|"r"|"m")
-      bool pinStatus = digitalRead(pr); //read matrix row
+      bool pinStatus = !digitalRead(pr); //read matrix row (low means true)
 
       //read state != saved state -> do something
       if (pinStatus != state[r][c] && abs(millis() - timer[r][c]) > debounce)
@@ -129,38 +143,30 @@ void loop()
             state[r][c] = false;
           }
         }
-        //// o-i-o toggles////press b for "up" | b+1 for "down" | b
-        else if (t == "sa" || "sb")
-        {
-          if (pinStatus) //toggle on
-          {
-            Joystick.setButton(b, true);
-            state[r][c] = true;
-          }
-          else //toggle off
-          {
-            int boff = 2; //button offset for the "off" button if t == "sa"
-            if (t == "sb")
-            {
-              boff = 1; //button offset for second pin
-            }
-            Joystick.setButton(b + boff, true); //add button offset for "off"
-            state[r][c] = false;
-          }
-        }
       }
 
       ////release toggle buttons////
-      if ((t == "t" || "sa" || "sb") && (abs(millis() - timer[r][c]) > toggleHold))
+      if ((t == "t") && (abs(millis() - timer[r][c]) > toggleHold))
       {
         Joystick.setButton(b, false);     //"on" button
         Joystick.setButton(b + 1, false); //"off" button
       }
     }
-    digitalWrite(pc, LOW);  //pull column pin back down
+    digitalWrite(pc, HIGH);  //pull column pin back up
   }
 
-  /////maybe still release rotary encoders here? -> less messages to send/receive?
+  /////release rotary encoders/////
+  for (int r = 0; r < 5; r++)
+  {
+    for (int p = 0; p < 2; p++)
+    {
+      if (rstate[r][p] && ((rtimer[r][p] - millis()) > rotaryhold))
+      {
+        Joystick.setButton(rButtons[r][p], false);
+        rstate[r][p] = false;
+      }
+    }
+  }
 }
 
 
@@ -172,10 +178,11 @@ void setPinModes()  //sets all pins to the right mode
   for (int i = 0; i < cols; i++)  //set col pins to outputs
   {
     pinMode(pincols[i], OUTPUT);
+    digitalWrite(pincols[i], HIGH);
   }
-  for (int i = 0; i < rows; i++)  //set row pins to inputs
+  for (int i = 0; i < rows; i++)  //set row pins to inputs with pullups
   {
-    pinMode(pinrows[i], INPUT);
+    pinMode(pinrows[i], INPUT_PULLUP);
   }
 }
 
@@ -184,23 +191,57 @@ void initializeToggles()  //set toggle states in state[][]
   for (int c = 0; c < cols; c++)
   {
     int pc = pincols[c];
-    digitalWrite(pc, HIGH); //pull current col to high
+    digitalWrite(pc, LOW); //pull current col down
 
     for (int r = 0; r < rows; r++)
     {
-      if(matrix[r][c] == "t" || "sa" || "sb")
+      if(matrix[r][c] == "t")
       {
-        state[r][c] = digitalRead(pinrows[r]);
+        state[r][c] = !digitalRead(pinrows[r]);
       }
     }
-    digitalWrite(pc, LOW);  //pull current col back to low
+    digitalWrite(pc, HIGH);  //pull current col back up
   }
 }
 
+//receive rotary updates from secondary arduino board
 void rotary(int num)
 {
   byte m = Wire.read();
   byte s = m & 1;           //read last bit (desired button state)
   byte n = (m >> 2) & 15;   //move 4-bit number to end, read only it
   Joystick.setButton(n, s); //set button "n" to state "s"
+
+  for (int i = 0; i < 5; i++)
+  {
+    for (int j = 0; j < 2; j++)
+    {
+      if(rButtons[i][j] == n)
+      {
+        rstate[i][j] = s;
+      }
+    }
+  }
+}
+
+//send initial data to secondary arduino on request
+void request()
+{
+  Wire.write((byte)rotarydeb);
+  /////pin numbers/////
+  for (int i = 0; i < 5; i++)
+  {
+    for (int j = 0; j < 2; j++)
+    {
+      Wire.write((byte)rPins[i][j]);
+    }
+  }
+  /////button numbers/////
+  for (int i = 0; i < 5; i++)
+  {
+    for (int j = 0; j < 2; j++)
+    {
+      Wire.write((byte)rButtons[i][j]);
+    }
+  }
 }
