@@ -22,7 +22,7 @@ const unsigned int rButtons[5][2] = {   {37, 38},
                                         {45, 46}  };
 
 //rotary states & timers for releasing buttons
-unsigned bool rstate [5][2] = {false};
+bool rstate [5][2] = {false};
 unsigned long rtimer [5][2] = {millis()};
 
 

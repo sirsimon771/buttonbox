@@ -72,8 +72,6 @@ void rotaryPush() //read rotary encoders and send data
 }
 
 
-
-
 //sends button num and -state to the main arduino through I2C
 void send(int n, bool s)
 {
@@ -110,5 +108,4 @@ void request()
 
         i++;
     }
-    
 }
