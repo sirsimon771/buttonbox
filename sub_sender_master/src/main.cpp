@@ -36,7 +36,7 @@ void pinSet() //set pin modes
     {
         for (int j = 0; j < 2; j++)
         {
-            pinMode(pins[i][j], INPUT);
+            pinMode(pins[i][j], INPUT_PULLUP);
         }
     }
 }
@@ -45,8 +45,8 @@ void rotaryPush() //read rotary encoders and send data
 {
     for (int r = 0; r < 5; r++)
     {
-        bool pin1 = digitalRead(pins[r][0]);
-        bool pin2 = digitalRead(pins[r][1]);
+        bool pin1 = !digitalRead(pins[r][0]);
+        bool pin2 = !digitalRead(pins[r][1]);
 
         if ((pin1 != lastp1[r]) && ((millis() - timerp1) > debounce))
         {
