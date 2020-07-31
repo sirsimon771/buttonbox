@@ -208,7 +208,7 @@ void rotary(int num)
   byte n = (m >> 2) & 15;   //move 4-bit number to end, read only it
   Joystick.setButton(n, s); //set button "n" to state "s"
 
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < 5; i++) //evtl umschreiben? (dictionary with button number as key and vector with [i][j] as value maybe?)
   {
     for (int j = 0; j < 2; j++)
     {
