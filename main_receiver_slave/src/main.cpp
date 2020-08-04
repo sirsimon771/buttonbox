@@ -9,11 +9,11 @@ const unsigned int address = 17; //I2C address of secondary arduino
 const unsigned int rotaryhold = 20;
 const unsigned int rotarydeb = 20;
 //pin nums -> send to secondary arduino on startup
-const unsigned int rPins[5][2] = {{4, 19},
-                                  {5, 18},
-                                  {6, 15},
-                                  {7, 14},
-                                  {8, 16}};
+const unsigned int rPins[5][2] = {{4, 10},
+                                  {5, 16},
+                                  {6, 14},
+                                  {7, 15},
+                                  {8, 18}};
 //button nums (cw, ccw) -> send to secondary arduino on startup
 const unsigned int rButtons[5][2] = {{37, 38},
                                      {39, 40},
