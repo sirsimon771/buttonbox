@@ -5,6 +5,8 @@
 //creating the joystick object
 Joystick_ Joystick;
 
+uint8_t buttonCount = 46;
+
 const unsigned int address = 17; //I2C address of secondary arduino
 const unsigned int rotaryhold = 20;
 const unsigned int rotarydeb = 20;

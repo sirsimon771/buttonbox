@@ -6,9 +6,10 @@
 
 unsigned int debounce = 20;
 unsigned int pins[5][2];
+
 unsigned int buttons[5][2];
 
-volatile bool lastp1[5] = {false};
+volatile bool lastp1[5] = {true};
 volatile unsigned long timer[5][2] = {millis()};
 volatile unsigned long timerp1 = millis();
 
@@ -22,6 +23,7 @@ void setup()
 {
     pinSet();     //set pin modes
     Wire.begin(); //begin I2C communication as master
+    //Serial.begin(9600);
     request();
 }
 
@@ -45,28 +47,33 @@ void rotaryPush() //read rotary encoders and send data
 {
     for (int r = 0; r < 5; r++)
     {
-        bool pin1 = !digitalRead(pins[r][0]);
-        bool pin2 = !digitalRead(pins[r][1]);
+        bool pin1 = digitalRead(pins[r][0]);
+        bool pin2 = digitalRead(pins[r][1]);
 
         if ((pin1 != lastp1[r]) && ((millis() - timerp1) > debounce))
         {
             //phase1 changed and time check passed
+            lastp1[r] = pin1;
 
-            if (pin1) //phase1 changed from low to high
+            if (!pin1) //phase1 changed from high to low
             {
-                lastp1[r] = HIGH;
 
                 if (pin2) //phase2 is high -> clockwise rotation
                 {
                     send(buttons[r][0], true);
+                    //Serial.print("\nclockwise, button:");
+                    //Serial.print(buttons[r][0]);
                     timerp1 = millis();
                 }
                 else //phase2 is low -> counterclockwise rotation
                 {
                     send(buttons[r][1], true);
+                    //Serial.print("\ncounterclockwise, button:");
+                    //Serial.print(buttons[r][1]);
                     timerp1 = millis();
                 }
             }
+            
         }
     }
 }
