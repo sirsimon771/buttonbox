@@ -5,9 +5,17 @@
 #include <Wire.h>
 
 unsigned int debounce = 20;
-unsigned int pins[5][2];
+unsigned int pins[5][2] = {{4, 10},
+                                  {5, 16},
+                                  {6, 14},
+                                  {7, 15},
+                                  {8, 18}};
 
-unsigned int buttons[5][2];
+unsigned int buttons[5][2] = {{37, 38},
+                                     {39, 40},
+                                     {41, 42},
+                                     {43, 44},
+                                     {45, 46}};
 
 volatile bool lastp1[5] = {true};
 volatile unsigned long timer[5][2] = {millis()};
@@ -84,7 +92,7 @@ void send(int n, bool s)
 {
     //first bit: leading 1; bit 2: empty; bits 3-6: 4-bit button number; last bit: state
     byte m = 1 << 7;      //start with leading 1
-    m = m | (n << 2) | s; //combine 4-bit number with state bit
+    m = m | (n << 2) | s; //combine 6-bit number with state bit
 
     ///send message byte///
     Wire.beginTransmission(17); //transmit to device #17

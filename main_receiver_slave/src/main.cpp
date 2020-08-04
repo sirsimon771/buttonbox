@@ -3,9 +3,7 @@
 #include <Joystick.h>
 
 //creating the joystick object
-Joystick_ Joystick;
-
-uint8_t buttonCount = 46;
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_GAMEPAD, 47, 0, false, false, false, false, false, false, false, false, false, false, false);
 
 const unsigned int address = 17; //I2C address of secondary arduino
 const unsigned int rotaryhold = 20;
@@ -160,7 +158,7 @@ void loop()
   {
     for (int p = 0; p < 2; p++)
     {
-      if (rstate[r][p] && ((rtimer[r][p] - millis()) > rotaryhold))
+      if ((rstate[r][p]) && (abs(millis() - rtimer[r][p]) > rotaryhold))
       {
         Joystick.setButton(rButtons[r][p], false);
         rstate[r][p] = false;
@@ -207,16 +205,17 @@ void rotary(int num)
 {
   byte m = Wire.read();
   byte s = m & 1;           //read last bit (desired button state)
-  byte n = (m >> 2) & 15;   //move 4-bit number to end, read only it
+  byte n = (m >> 2) & 63;   //move 6-bit number to end, read only it
   Joystick.setButton(n, s); //set button "n" to state "s"
 
   for (int i = 0; i < 5; i++) //evtl umschreiben? (dictionary with button number as key and vector with [i][j] as value maybe?)
   {
     for (int j = 0; j < 2; j++)
     {
-      if (rButtons[i][j] == n)
+      if (rButtons[i][j] == (n))
       {
         rstate[i][j] = s;
+        rtimer[i][j] = millis();
       }
     }
   }
