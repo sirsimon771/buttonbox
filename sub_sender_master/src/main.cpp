@@ -5,17 +5,17 @@
 #include <Wire.h>
 
 unsigned int debounce = 20;
-unsigned int pins[5][2] = {{4, 10},
-                                  {5, 16},
-                                  {6, 14},
-                                  {7, 15},
-                                  {8, 18}};
+unsigned int pins[5][2] =  {{4, 10},
+                            {5, 16},
+                            {6, 14},
+                            {7, 15},
+                            {8, 18}};
 
-unsigned int buttons[5][2] = {{37, 38},
-                                     {39, 40},
-                                     {41, 42},
-                                     {43, 44},
-                                     {45, 46}};
+unsigned int buttons[5][2] =   {{37, 38},
+                                {39, 40},
+                                {41, 42},
+                                {43, 44},
+                                {45, 46}};
 
 volatile bool lastp1[5] = {true};
 volatile unsigned long timer[5][2] = {millis()};
@@ -32,7 +32,7 @@ void setup()
     pinSet();     //set pin modes
     Wire.begin(); //begin I2C communication as master
     //Serial.begin(9600);
-    request();
+    //request();
 }
 
 void loop()

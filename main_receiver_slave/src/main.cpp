@@ -6,7 +6,7 @@
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_GAMEPAD, 47, 0, false, false, false, false, false, false, false, false, false, false, false);
 
 const unsigned int address = 17; //I2C address of secondary arduino
-const unsigned int rotaryhold = 20;
+const unsigned int rotaryhold = 70;
 const unsigned int rotarydeb = 20;
 //pin nums -> send to secondary arduino on startup
 const unsigned int rPins[5][2] = {{4, 10},
