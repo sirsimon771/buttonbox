@@ -29,7 +29,7 @@ const int rows = 6; //number of matrix rows
 const int cols = 6; //number of matrix columns
 
 const int debounce = 6;     //delay in ms between button presses for debouncing
-const int toggleHold = 200; //time in ms to hold toggle button pressed
+const int toggleHold = 100; //time in ms to hold toggle button pressed
 
 //inputting the matrix layout
 //b = button | t = toggle | r = rotary-button | s = o-i-o toggle | n = none/empty
@@ -54,6 +54,8 @@ const int num[6][6] = {{0, 1, 2, 3, 12, 14},
 
 //state of all matrix elements
 bool state[6][6] = {false};
+//toggle states for release of toggle buttons
+bool tstate[6][6] = {false};
 
 //matrix for timers (for debouncing and releasing of toggle buttons)
 unsigned long timer[6][6] = {0};
@@ -130,26 +132,27 @@ void loop()
         ////toggle switches////press b for "on" & b+1 for "off"////
         if (t == "t")
         {
-          if (pinStatus) //toggle on
-          {
-            Joystick.setButton(b, true);
-            state[r][c] = true;
-          }
-          else //toggle off
-          {
-            Joystick.setButton(b + 1, true);
-            state[r][c] = true;
-          }
+            if (!pinStatus) //toggle on if logical 1 (low)
+            {
+                Joystick.setButton(b, true);
+                state[r][c] = true;
+                tstate[r][c] = true;
+            }
+            else //toggle off if logical 0 (high)
+            {
+                Joystick.setButton(b + 1, true);
+                state[r][c] = false;
+                tstate[r][c] = true;
+            }
         }
       }
       ////release toggle buttons////
-      if ( state[r][c] && (abs(millis() - timer[r][c]) > toggleHold))
+      if (tstate[r][c] && (abs(millis() - timer[r][c]) > toggleHold))
       {
           Joystick.setButton(b, false);     //"on" button
           Joystick.setButton(b + 1, false); //"off" button
-          state[r][c] = false;
+          tstate[r][c] = false;
       }
-
     }
     digitalWrite(pc, HIGH); //pull column pin back up
   }
