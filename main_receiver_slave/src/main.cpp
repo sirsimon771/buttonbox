@@ -138,17 +138,18 @@ void loop()
           else //toggle off
           {
             Joystick.setButton(b + 1, true);
-            state[r][c] = false;
-          }
-
-          ////release toggle buttons////
-          if (abs(millis() - timer[r][c]) > toggleHold)
-          {
-            Joystick.setButton(b, false);     //"on" button
-            Joystick.setButton(b + 1, false); //"off" button
+            state[r][c] = true;
           }
         }
       }
+      ////release toggle buttons////
+      if ( state[r][c] && (abs(millis() - timer[r][c]) > toggleHold))
+      {
+          Joystick.setButton(b, false);     //"on" button
+          Joystick.setButton(b + 1, false); //"off" button
+          state[r][c] = false;
+      }
+
     }
     digitalWrite(pc, HIGH); //pull column pin back up
   }
