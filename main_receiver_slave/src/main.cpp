@@ -132,7 +132,7 @@ void loop()
         ////toggle switches////press b for "on" & b+1 for "off"////
         if (t == "t")
         {
-            if (!pinStatus) //toggle on if logical 1 (low)
+            if (pinStatus) //toggle on if logical 1 (low)
             {
                 Joystick.setButton(b, true);
                 state[r][c] = true;
@@ -197,7 +197,7 @@ void initializeToggles() //set toggle states in state[][]
     {
       if (matrix[r][c] == "t")
       {
-        state[r][c] = !digitalRead(pinrows[r]);
+        state[r][c] = digitalRead(pinrows[r]);
       }
     }
     digitalWrite(pc, HIGH); //pull current col back up
