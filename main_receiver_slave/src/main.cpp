@@ -41,7 +41,7 @@ const String matrix[6][6] = {{"b", "b", "b", "b", "t", "t"},
                              {"m", "m", "m", "m", "n", "n"}};
 
 //pin numbers of all columns and rows
-const int pinrows[6] = {4, 5, 6, 7, 8, 9};
+const int pinrows[6] = {4, 5, 20, 7, 8, 9};
 const int pincols[6] = {19, 18, 15, 14, 16, 10};
 
 //numbers of joystick-buttons
