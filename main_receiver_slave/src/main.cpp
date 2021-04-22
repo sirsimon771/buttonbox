@@ -8,6 +8,7 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_GAMEPAD, 47, 0, fal
 const unsigned int address = 17; //I2C address of secondary arduino
 const unsigned int rotaryhold = 70;
 const unsigned int rotarydeb = 20;
+
 //pin nums -> send to secondary arduino on startup
 const unsigned int rPins[5][2] = {{4, 10},
                                   {5, 16},
@@ -28,7 +29,8 @@ unsigned long rtimer[5][2] = {millis()};
 const int rows = 6; //number of matrix rows
 const int cols = 6; //number of matrix columns
 
-const int debounce = 6;     //delay in ms between button presses for debouncing
+const bool toggleseparatebuttons = 0; //disable to have toggle switches just push one button (second button will be skipped)
+const int debounce = 100;   //delay in ms between button presses for debouncing
 const int toggleHold = 100; //time in ms to hold toggle button pressed
 
 //inputting the matrix layout
@@ -140,7 +142,7 @@ void loop()
             }
             else //toggle off if logical 0 (high)
             {
-                Joystick.setButton(b + 1, true);
+                Joystick.setButton(b + toggleseparatebuttons, true);  //if tsp on, push next button, otherwise same button
                 state[r][c] = false;
                 tstate[r][c] = true;
             }
