@@ -43,7 +43,7 @@ const String matrix[6][6] = {{"b", "b", "b", "b", "t", "t"},
                              {"m", "m", "m", "m", "n", "n"}};
 
 //pin numbers of all columns and rows
-const int pinrows[6] = {4, 5, 20, 7, 8, 9};
+const int pinrows[6] = {4, 5, 21, 7, 8, 9};
 const int pincols[6] = {19, 18, 15, 14, 16, 10};
 
 //numbers of joystick-buttons
@@ -110,14 +110,14 @@ void loop()
   for (int c = 0; c < cols; c++)
   {
     int pc = pincols[c];   //pin of current column
-    digitalWrite(pc, LOW); //pull current col pin low
+    digitalWrite(pc, HIGH); //pull current col pin high
 
     for (int r = 0; r < rows; r++)
     {
       int pr = pinrows[r];               //pin of current row
       int b = num[r][c];                 //button number of current position
       String t = matrix[r][c];           //current type ("b"|"t"|"r"|"m")
-      bool pinStatus = !digitalRead(pr); //read matrix row (low means true)
+      bool pinStatus = digitalRead(pr); //read matrix row
 
       //read state != saved state -> do something
       if (pinStatus != state[r][c] && abs(millis() - timer[r][c]) > debounce)
@@ -128,19 +128,19 @@ void loop()
         if (t == "b" || "r" || "m")
         {
           Joystick.setButton(b, pinStatus); //push or release button
-          state[r][c] = pinStatus;          //invert state variable
+          state[r][c] = pinStatus;          //update state array
         }
 
         ////toggle switches////press b for "on" & b+1 for "off"////
         if (t == "t")
         {
-            if (pinStatus) //toggle on if logical 1 (low)
+            if (pinStatus) //toggle on if high
             {
                 Joystick.setButton(b, true);
                 state[r][c] = true;
                 tstate[r][c] = true;
             }
-            else //toggle off if logical 0 (high)
+            else //toggle off if low
             {
                 Joystick.setButton(b + toggleseparatebuttons, true);  //if tsp on, push next button, otherwise same button
                 state[r][c] = false;
@@ -156,7 +156,7 @@ void loop()
           tstate[r][c] = false;
       }
     }
-    digitalWrite(pc, HIGH); //pull column pin back up
+    digitalWrite(pc, LOW); //pull column pin back down
   }
 
   /////release rotary encoders/////
@@ -180,11 +180,11 @@ void setPinModes() //sets all pins to the right mode
   for (int i = 0; i < cols; i++) //set col pins to outputs
   {
     pinMode(pincols[i], OUTPUT);
-    digitalWrite(pincols[i], HIGH);
+    digitalWrite(pincols[i], LOW);
   }
-  for (int i = 0; i < rows; i++) //set row pins to inputs with pullups
+  for (int i = 0; i < rows; i++) //set row pins to inputs
   {
-    pinMode(pinrows[i], INPUT_PULLUP);
+    pinMode(pinrows[i], INPUT);
   }
 }
 
@@ -193,7 +193,7 @@ void initializeToggles() //set toggle states in state[][]
   for (int c = 0; c < cols; c++)
   {
     int pc = pincols[c];
-    digitalWrite(pc, LOW); //pull current col down
+    digitalWrite(pc, HIGH); //pull current col high
 
     for (int r = 0; r < rows; r++)
     {
@@ -202,7 +202,7 @@ void initializeToggles() //set toggle states in state[][]
         state[r][c] = digitalRead(pinrows[r]);
       }
     }
-    digitalWrite(pc, HIGH); //pull current col back up
+    digitalWrite(pc, LOW); //pull current col back low
   }
 }
 
